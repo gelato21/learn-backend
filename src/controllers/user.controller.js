@@ -1,6 +1,6 @@
 import { asyncHandler } from "../utils/AsyncHandler.js";
 import {ApiError} from "../utils/ApiError.js";
-import { User } from "../models/User.js";
+import { User } from "../models/user.model.js";
 import {uploadOnClodinary} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
@@ -24,7 +24,7 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
     //Database se puch rhe h
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
         $or: [{username}, {email}]
     })
 
@@ -33,19 +33,28 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
     //see in console log of req.body, req.files,
-    const avatarLocalPath = req.files?.avtar[0]?.path
-    const coverImageLocatPath = req.files?.coverImage[0]?.path
+    console.log(req.files);
+    const avatarLocalPath = req.files?.avatar[0]?.path
+    // const coverImageLocatPath = req.files?.coverImage[0]?.path
+    let coverImage = null
+    if(req.files && req.files.coverImage){
+        console.log(req.files.coverImage);
+        coverImage = await uploadOnClodinary(coverImageLocatPath)
+    }
+
+
 
     if(!avatarLocalPath){
         throw new ApiError(400, "Please provide avtar file");
     }
 
     const avatar = await uploadOnClodinary(avatarLocalPath)
-    const coverImage = await uploadOnClodinary(coverImageLocatPath)
+    // const coverImage = await uploadOnClodinary(coverImageLocatPath)
 
     if(!avatar){
         throw new ApiError(500, "Error occured while uploading avtar file");
     }
+    console.log(avatar); 
 
     const user = await User.create({
         fullName,
@@ -56,7 +65,7 @@ const registerUser = asyncHandler(async (req, res) => {
         coverImage: coverImage?.url || "",
     })
 
-    const createdUser = await user.findById(user._id).select(
+    const createdUser = await User.findById(user._id).select(
         "-password -refershToken"
     )
 
